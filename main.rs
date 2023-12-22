@@ -9,13 +9,35 @@ enum Mode {
     Kernel,
     Hypervisor,
     UEFI,
+    Off,
 }
 
 type InstructionHandler = fn();
 
+fn provide_hint(mode: Mode) {
+    match mode {
+        Mode::Off => println!("Hint: Type 'init_uefi' to start the board"),
+        Mode::UEFI => println!("Hint: Type 'load_hypervisor' to load Hypervisor mode"),
+        Mode::Hypervisor => println!("Hint: Type 'load_kernel' to load the Kernel mode"),
+        Mode::Kernel => println!("Hint: Type 'start_user_space' to start user space applications"),
+        Mode::User => println!("Hint: Execute user-level instructions like 'ADD', 'SUB', etc."),
+    }
+}
+
+fn print_instructions_list(instruction_map: &HashMap<&str, InstructionHandler>) {
+    println!("Available Instructions:");
+    for instruction in instruction_map.keys() {
+        println!("- {}", instruction);
+    }
+}
+
 fn main() {
+    println!("Secure booter 0: A serious game");
+    println!("Copyright QVLX LLC 2023");
+    println!("All rights reserved.");
+
     let mut rl = Editor::<()>::new();
-    let mut mode = Mode::UEFI;
+    let mut mode = Mode::Off;
     let mut instruction_map: HashMap<&str, InstructionHandler> = HashMap::new();
     let mut instruction_modes: HashMap<&str, Mode> = HashMap::new();
 
@@ -40,11 +62,16 @@ fn main() {
     fn lea_handler() { println!("Executed LEA instruction"); }
 
     // x86/64 System-level Instruction Handlers with Secure Boot
-    fn init_uefi() { println!("Initialized UEFI firmware mode"); }
-    fn load_hypervisor() { println!("Loaded Hypervisor in Hypervisor mode"); }
-    fn load_kernel() { println!("Kernel loaded in Kernel mode"); }
-    fn start_user_space() { println!("User space applications started in User mode"); }
-    fn verify_signature() { println!("Verified digital signature"); }
+    fn init_initial_hw() { println!("Initialized UEFI firmware mode"); }
+    fn verify_hypervisor() { println!("Verified Hypervisor"); }
+    fn load_hypervisor() { println!("Loaded Hypervisor"); }
+    fn init_full_hw() { println!("Hypervisor managed hardware"); }
+    fn verify_bootloader() { println!("Verified bootloader"); }
+    fn load_kernel() { println!("Bootstrapped kernel"); }
+    fn verify_filesystem() { println!("Verified filesystem"); }
+    fn start_user_space() { println!("User space started"); }
+    fn verify_application() { println!("Verified application"); }
+    fn load_application() { println!("Application loaded in userspace"); }
 
     // Instructions
     let instructions = [
@@ -66,14 +93,21 @@ fn main() {
         ("RET", ret_handler as InstructionHandler, Mode::User),
         ("NOP", nop_handler as InstructionHandler, Mode::User),
         ("LEA", lea_handler as InstructionHandler, Mode::User),
-        // System instructions (ish). I need to rework this
-        ("init_uefi", init_uefi as InstructionHandler, Mode::UEFI),
-        ("load_hypervisor", load_hypervisor as InstructionHandler, Mode::Hypervisor),
-        ("load_kernel", load_kernel as InstructionHandler, Mode::Kernel),
-        ("start_user_space", start_user_space as InstructionHandler, Mode::User),
-        ("verify_signature", verify_signature as InstructionHandler, Mode::UEFI),
-    ];
 
+        // System instructions (ish). I need to rework this
+        ("init_initial_hw", init_uefi as InstructionHandler, Mode::UEFI),
+        ("verify_hypervisor", verify_hypervisor as InstructionHandler, Mode::UEFI),
+        ("load_hypervisor",  load_hypervisor as InstructionHandler, Mode::Hypervisor),
+        ("init_full_hw", init_hardware as InstructionHandler, Mode::Hypervisor),
+        ("verify_bootloader", verify_bootloader as InstructionHandler, Mode::Hypervisor),
+        ("load_kernel", load_kernel as InstructionHandler, Mode::Hypervisor),
+        ("verify_filesystem", verify_filesystem as InstructionHandler, Mode::Kernel),
+        ("verify_application", verify_application as InstructionHandler, Mode::Kernel),
+        ("start_user_space", start_user_space as InstructionHandler, Mode::Kernel),
+        ("load_application", load_application as InstructionHandler, Mode::Kernel),
+        // in Mode::User now
+    ];
+    
     for &(inst, handler, mode) in &instructions {
         instruction_map.insert(inst, handler);
         instruction_modes.insert(inst, mode);
@@ -89,8 +123,11 @@ fn main() {
                 if parts.is_empty() { continue; }
 
                 match parts[0] {
-                    "switch_mode" => {
+                    "hint" => provide_hint(mode),
+                    "instructions" => print_instructions_list(&instruction_map),
+                    "powerup" => {
                         mode = match mode {
+                            Mode::Off => Mode::UEFI,
                             Mode::UEFI => Mode::Hypervisor,
                             Mode::Hypervisor => Mode::Kernel,
                             Mode::Kernel => Mode::User,
