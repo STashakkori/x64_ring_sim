@@ -32,10 +32,17 @@ fn print_instructions_list(instruction_map: &HashMap<&str, InstructionHandler>) 
 }
 
 fn main() {
-    println!("Secure booter 0: A serious game");
-    println!("Copyright QVLX LLC 2023");
-    println!("All rights reserved.");
-
+    let ansi_color_code = "\x1b[38;5;197m"; // 197 is a close approximation for #FF6699 in the 256-color palette
+    let reset_code = "\x1b[0m"; // Resets the color
+    println!("  Secure booter 0: A serious game");
+    println!("    Copyright QVLX LLC 2023");
+    println!("    All rights reserved.\n");
+    println!("{}  Secure booter 0: A serious game{}", ansi_color_code, reset_code);
+    println!("{}    Copyright QVLX LLC 2023{}", ansi_color_code, reset_code);
+    println!("{}    All rights reserved.\n{}", ansi_color_code, reset_code);
+    println!("** x8664 Edition **");
+    println!("type powerup once to start");
+    println!("type instructions for superset");
     let mut rl = Editor::<()>::new();
     let mut mode = Mode::Off;
     let mut instruction_map: HashMap<&str, InstructionHandler> = HashMap::new();
@@ -95,10 +102,10 @@ fn main() {
         ("LEA", lea_handler as InstructionHandler, Mode::User),
 
         // System instructions (ish). I need to rework this
-        ("init_initial_hw", init_uefi as InstructionHandler, Mode::UEFI),
+        ("init_initial_hw", init_initial_hw as InstructionHandler, Mode::UEFI),
         ("verify_hypervisor", verify_hypervisor as InstructionHandler, Mode::UEFI),
         ("load_hypervisor",  load_hypervisor as InstructionHandler, Mode::Hypervisor),
-        ("init_full_hw", init_hardware as InstructionHandler, Mode::Hypervisor),
+        ("init_full_hw", init_full_hw as InstructionHandler, Mode::Hypervisor),
         ("verify_bootloader", verify_bootloader as InstructionHandler, Mode::Hypervisor),
         ("load_kernel", load_kernel as InstructionHandler, Mode::Hypervisor),
         ("verify_filesystem", verify_filesystem as InstructionHandler, Mode::Kernel),
