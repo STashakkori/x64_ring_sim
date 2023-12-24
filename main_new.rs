@@ -261,10 +261,11 @@ fn main() {
 				let cmd = parts[0];
 
 				match process_command(cmd, &mut state) {
-					CommandResult::Success | CommandResult::NotVerified => {
-						mode = state.current_mode(); // Update mode
-						continue 'shell;
-					},
+					CommandResult::Success => {
+                                            mode = state.current_mode(); // Update mode only on success
+                                            continue 'shell;
+                                        },
+                                        CommandResult::NotVerified => continue 'shell,
 					CommandResult::UnknownCommand => {
 						match cmd {
 							"hint" => provide_hint(mode),
