@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::process::Command;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use crossterm::event::{self, Event, KeyCode, poll};
+use crossterm::event::{self, Event, KeyCode, KeyEvent, poll};
 use std::time::Duration;
 
 fn print_splash() {
@@ -29,20 +29,29 @@ fn main() {
 
     while running.load(Ordering::SeqCst) {
         if poll(Duration::from_millis(500)).unwrap() {
-            if let Ok(Event::Key(key_event)) = event::read() {
-                match key_event.code {
+            if let Ok(Event::Key(KeyEvent { code, .. })) = event::read() {
+                match code {
                     KeyCode::Char(c) => {
                         print!("{}", c);
                         io::stdout().flush().unwrap();
                         input.push(c);
                     },
+                    KeyCode::Backspace => {
+                        if !input.is_empty() {
+                            input.pop();
+                            print!("\x08 \x08"); // Backspace, clear character, backspace again
+                            io::stdout().flush().unwrap();
+                        }
+                    },
                     KeyCode::Enter => {
                         println!();
                         match input.trim() {
                             "x8664" => {
+                                println!();
                                 Command::new("x8664").spawn().expect("Failed to execute x8664");
                             },
                             "arm64" => {
+                                println!();
                                 Command::new("arm64").spawn().expect("Failed to execute arm64");
                             },
                             "exit" => {
@@ -55,7 +64,7 @@ fn main() {
                         print!("secboot> ");
                         io::stdout().flush().unwrap();
                     },
-                    _ => continue,
+                    _ => {}
                 }
             }
         }
